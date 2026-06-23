@@ -25,6 +25,9 @@ line-length = 80
 preview = true
 select = ['I', 'F', 'E', 'W', 'PL', 'PT']
 
+[tool.ruff.lint.per-file-ignores]
+'tests/**' = ['PLR2004', 'PLR6301']
+
 [tool.ruff.format]
 preview = true
 quote-style = 'single'
