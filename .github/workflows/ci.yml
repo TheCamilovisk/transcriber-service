@@ -10,6 +10,10 @@ on:
       - main
       - dev
 
+env:
+  PYTHON_VERSION: "3.13"
+  PYTHONUNBUFFERED: "1"
+
 jobs:
   lint-and-test:
     runs-on: ubuntu-latest
@@ -20,16 +24,20 @@ jobs:
       - name: Install Python 3.13
         uses: actions/setup-python@v5
         with:
-          python-version: '3.13'
+          python-version: "3.13"
 
       - name: Install UV
         uses: astral-sh/setup-uv@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          enable-cache: true
+          cache-suffix: lint
 
       - name: Install dependencies
-        run: uv sync
+        run: uv sync --group dev
 
-      - name: Run Ruff
-        run: uv run ruff check .
+      - name: Check formatting
+        run: uv run ruff format --check .
 
       - name: Run pytest
         run: uv run pytest
