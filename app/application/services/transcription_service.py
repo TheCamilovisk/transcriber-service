@@ -142,3 +142,26 @@ class TranscriptionService:
         items = self._repository.list(status=status, limit=limit, offset=offset)
         total = self._repository.count(status=status)
         return items, total
+
+    def claim_next_pending_job(self) -> TranscriptionJob | None:
+        job = self._repository.get_oldest_pending()
+        if job is None:
+            return None
+
+        now = utc_now()
+        job.status = 'processing'
+        job.started_at = now
+        job.updated_at = now
+        self._session.commit()
+        return job
+
+    def reset_processing_jobs_to_pending(self) -> list[TranscriptionJob]:
+        jobs = self._repository.list_processing_jobs()
+        now = utc_now()
+        for job in jobs:
+            job.status = 'pending'
+            job.started_at = None
+            job.updated_at = now
+        if jobs:
+            self._session.commit()
+        return jobs
