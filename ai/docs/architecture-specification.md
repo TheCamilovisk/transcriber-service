@@ -1475,12 +1475,19 @@ MAX_UPLOAD_SIZE_MB=25
 WORKER_POLL_INTERVAL_SECONDS=3
 
 FASTER_WHISPER_MODEL_SIZE=small
-FASTER_WHISPER_DEVICE=cpu
-FASTER_WHISPER_COMPUTE_TYPE=int8
+FASTER_WHISPER_DEVICE=cuda
+FASTER_WHISPER_COMPUTE_TYPE=float16
+
+# CPU fallback (host without an NVIDIA GPU / Container Toolkit):
+# FASTER_WHISPER_DEVICE=cpu
+# FASTER_WHISPER_COMPUTE_TYPE=int8
 
 API_HOST=0.0.0.0
 API_PORT=8000
 ```
+
+See §20.11 for the GPU device reservation and runtime library setup behind
+the `cuda`/`float16` defaults above.
 
 ## 20.10 API Health Check
 
@@ -1505,6 +1512,48 @@ healthcheck:
 No worker health check is required in v1.
 
 Worker health is inspected through logs.
+
+## 20.11 GPU Support
+
+The `worker` service can use an NVIDIA GPU for Faster Whisper inference.
+This requires the host to already have an NVIDIA driver and the NVIDIA
+Container Toolkit installed and configured (host-level setup, outside this
+repo — see README "GPU Host Setup").
+
+The base image stays `python:3.13-slim` — no CUDA base image is used.
+Instead:
+
+- `pyproject.toml` defines a `gpu` optional dependency group with
+  `nvidia-cublas-cu12` and `nvidia-cudnn-cu12`, providing the cuBLAS/cuDNN
+  shared libraries `ctranslate2` needs. The NVIDIA Container Toolkit only
+  exposes the driver and device nodes to the container; it does not provide
+  these libraries.
+- The Dockerfile installs the `gpu` extra
+  (`uv sync --frozen --no-dev --extra gpu`) and sets `LD_LIBRARY_PATH` to
+  the `nvidia/cublas/lib` and `nvidia/cudnn/lib` directories under
+  `/opt/venv/lib/python3.13/site-packages`.
+- `docker-compose.yml` requests the GPU for the `worker` service only (the
+  only service that loads the model) via the Compose-spec device
+  reservation:
+
+```yaml
+worker:
+  deploy:
+    resources:
+      reservations:
+        devices:
+          - driver: nvidia
+            count: 1
+            capabilities: [gpu]
+```
+
+- `FASTER_WHISPER_DEVICE=cuda` and `FASTER_WHISPER_COMPUTE_TYPE=float16`
+  become the Docker defaults; `cpu`/`int8` remain a documented fallback for
+  hosts without a GPU.
+
+If the pip-wheel approach proves unreliable, the documented fallback is
+switching to an `nvidia/cuda:*-cudnn-runtime` base image instead — not
+pursued unless needed.
 
 ---
 
