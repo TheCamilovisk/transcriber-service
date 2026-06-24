@@ -131,8 +131,9 @@ Create a new transcription job. Accepts multipart form data.
 
 | Status | Detail |
 |---|---|
-| 400 | Unsupported file extension, file too large (>25 MB), empty file, or invalid language code |
-| 422 | Missing audio field or invalid multipart format |
+| 400 | Unsupported file extension or empty file |
+| 413 | Uploaded audio file exceeds the 25 MB limit |
+| 422 | Missing audio field, invalid multipart format, or invalid language value |
 
 ### GET `/api/v1/transcriptions/{job_id}`
 
