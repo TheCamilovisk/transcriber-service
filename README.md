@@ -27,9 +27,49 @@ Client → FastAPI API → SQLite (jobs table) → polling Worker → Faster Whi
 
 - **Docker** (Docker Compose v2) — recommended for easiest setup.
 - **Or** Python 3.13+ with `uv` for direct execution.
+- **Optional: NVIDIA GPU** for faster inference — see [GPU Host Setup](#gpu-host-setup-optional) below. Falls back to CPU if not configured.
 
 The **Faster Whisper model** (~1 GB for the default `small` model) is
 downloaded automatically on first worker start.
+
+### GPU Host Setup (optional)
+
+The worker can use an NVIDIA GPU for much faster transcription. This
+requires host-level setup outside this repo — Docker Compose can request a
+GPU, but it can't install drivers for you.
+
+1. **Install the NVIDIA GPU driver** on the host (not in a container).
+   Verify with `nvidia-smi` on the host before continuing.
+2. **Install the NVIDIA Container Toolkit** so Docker containers can see
+   the GPU. Full instructions:
+   https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html
+
+   Short version (apt-based hosts):
+
+   ```bash
+   curl -fsSL https://nvidia.github.io/libnvidia-container/gpgkey | sudo gpg --dearmor -o /usr/share/keyrings/nvidia-container-toolkit-keyring.gpg
+   curl -s -L https://nvidia.github.io/libnvidia-container/stable/deb/nvidia-container-toolkit.list | \
+     sed 's#deb https://#deb [signed-by=/usr/share/keyrings/nvidia-container-toolkit-keyring.gpg] https://#g' | \
+     sudo tee /etc/apt/sources.list.d/nvidia-container-toolkit.list
+   sudo apt-get update && sudo apt-get install -y nvidia-container-toolkit
+   sudo nvidia-ctk runtime configure --runtime=docker
+   sudo systemctl restart docker
+   ```
+
+3. **Verify Docker can see the GPU** before relying on this repo's compose
+   file:
+
+   ```bash
+   docker run --rm --gpus all nvidia/cuda:12.4.1-base-ubuntu22.04 nvidia-smi
+   ```
+
+   If this doesn't print the GPU, fix the host/toolkit setup first — the
+   `worker` service's GPU reservation in `docker-compose.yml` won't help
+   otherwise.
+
+Once the host is ready, `.env.example` already defaults to
+`FASTER_WHISPER_DEVICE=cuda` / `FASTER_WHISPER_COMPUTE_TYPE=float16`. On a
+machine without a GPU, uncomment the CPU fallback lines in `.env` instead.
 
 ## Quick Start
 
@@ -89,8 +129,8 @@ Configuration is loaded from `.env` (see `.env.example` for all options).
 | `MAX_UPLOAD_SIZE_MB` | `25` | Maximum upload file size |
 | `WORKER_POLL_INTERVAL_SECONDS` | `3` | Seconds between worker poll cycles |
 | `FASTER_WHISPER_MODEL_SIZE` | `small` | Model size (tiny, small, medium, large-v3) |
-| `FASTER_WHISPER_DEVICE` | `cpu` | Device (cpu or cuda) |
-| `FASTER_WHISPER_COMPUTE_TYPE` | `int8` | Compute type (int8, float16, float32) |
+| `FASTER_WHISPER_DEVICE` | `cuda` | Device (`cuda` for GPU, `cpu` otherwise — see [GPU Host Setup](#gpu-host-setup-optional)) |
+| `FASTER_WHISPER_COMPUTE_TYPE` | `float16` | Compute type (float16/float32 for GPU, int8 for CPU) |
 
 Docker defaults use `/app/data/...` paths. For local (non-Docker) development,
 uncomment the local paths in `.env.example`.
@@ -370,6 +410,21 @@ Change the port mapping in `docker-compose.yml` or set `API_PORT` in `.env`.
 Check that `UPLOAD_DIR` exists and is writable. The API validates file
 extension (mp3, wav, m4a, ogg, webm), file size (max 25 MB), and rejects
 empty files.
+
+### GPU not detected / falls back to CPU
+
+If the worker logs show `device=cuda` but transcription is slow or the
+worker fails to load the model, check, in order:
+
+1. `nvidia-smi` works on the **host** (not in a container).
+2. `docker run --rm --gpus all nvidia/cuda:12.4.1-base-ubuntu22.04 nvidia-smi`
+   works — if not, the NVIDIA Container Toolkit isn't installed/configured;
+   see [GPU Host Setup](#gpu-host-setup-optional).
+3. `docker exec <worker_container> nvidia-smi` shows the GPU inside the
+   running worker container.
+
+If the host has no GPU at all, set `FASTER_WHISPER_DEVICE=cpu` and
+`FASTER_WHISPER_COMPUTE_TYPE=int8` in `.env` instead.
 
 ## Architecture Overview
 

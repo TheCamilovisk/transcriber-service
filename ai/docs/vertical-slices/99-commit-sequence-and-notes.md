@@ -20,6 +20,7 @@ A practical commit sequence could be:
 12. `ci: add github actions workflow`
 13. `docs: add README usage documentation`
 14. `chore: final cleanup and acceptance pass`
+15. `chore: add GPU support for faster whisper via docker compose`
 
 ## 6. Implementation Notes and Defaults
 
@@ -125,6 +126,8 @@ GET /health
 10. Ruff linting and formatting are configured.
 11. CI runs pytest and Ruff on `main`/`dev` push and pull requests.
 12. README documents setup, usage, testing, and limitations.
+13. GPU inference is supported via Docker Compose on hosts with the NVIDIA
+    Container Toolkit installed, with a documented CPU fallback.
 
 ## 8. Next Step After This Plan
 

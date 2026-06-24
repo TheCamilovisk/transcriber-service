@@ -12,7 +12,11 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 
 COPY pyproject.toml uv.lock ./
-RUN uv sync --frozen --no-dev
+RUN uv sync --frozen --no-dev --extra gpu
+
+# cuBLAS/cuDNN come from the gpu extra's pip wheels (no CUDA base image
+# needed); the NVIDIA Container Toolkit only exposes the driver/devices.
+ENV LD_LIBRARY_PATH="/opt/venv/lib/python3.13/site-packages/nvidia/cublas/lib:/opt/venv/lib/python3.13/site-packages/nvidia/cudnn/lib:${LD_LIBRARY_PATH}"
 
 COPY app ./app
 COPY alembic ./alembic

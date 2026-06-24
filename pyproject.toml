@@ -22,6 +22,10 @@ dev = [
     'pytest-cov',
     "httpx2>=2.4.0",
 ]
+gpu = [
+    'nvidia-cublas-cu12',
+    'nvidia-cudnn-cu12==9.*',
+]
 
 [tool.pytest.ini_options]
 addopts = '-m "not integration"'
