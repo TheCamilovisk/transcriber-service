@@ -13,6 +13,9 @@ from app.infrastructure.repositories.transcription_job_repository import (
     TranscriptionJobRepository,
 )
 from app.infrastructure.storage.local_audio_storage import LocalAudioStorage
+from app.infrastructure.transcriber.faster_whisper_transcriber import (
+    TranscriptionResult,
+)
 from app.settings import get_settings
 from app.utils.time import utc_now
 
@@ -165,3 +168,55 @@ class TranscriptionService:
         if jobs:
             self._session.commit()
         return jobs
+
+    def process_job(self, job_id: str, transcriber) -> None:
+        """Process a transcription job using the given transcriber.
+
+        Fetches the job, checks audio file existence, transcribes,
+        stores the result, and cleans up the audio file.
+        """
+        job = self._repository.get_by_id(job_id)
+        if job is None:
+            logger.warning('Job %s not found, skipping.', job_id)
+            return
+
+        audio_path = job.stored_audio_path
+
+        # Check if the audio file still exists.
+        if not self._storage.exists(audio_path):
+            logger.warning(
+                'Audio file missing for job %s: %s', job_id, audio_path
+            )
+            job.status = 'failed'
+            job.error_message = 'Audio file is no longer available.'
+            job.finished_at = utc_now()
+            job.updated_at = utc_now()
+            self._session.commit()
+            return
+
+        # Transcribe.
+        try:
+            result: TranscriptionResult = transcriber.transcribe(
+                audio_path, language=job.language
+            )
+        except Exception:
+            logger.exception('Transcription failed for job %s.', job_id)
+            job.status = 'failed'
+            job.error_message = 'Could not transcribe the audio file.'
+            job.finished_at = utc_now()
+            job.updated_at = utc_now()
+            self._session.commit()
+            self._storage.delete(audio_path)
+            return
+
+        # Store result.
+        job.text = result.text
+        if job.language is None:
+            job.language = result.language
+        job.status = 'completed'
+        job.finished_at = utc_now()
+        job.updated_at = utc_now()
+        self._session.commit()
+
+        # Clean up audio file after processing.
+        self._storage.delete(audio_path)
