@@ -18,3 +18,8 @@ import os
 # ---------------------------------------------------------------------------
 os.environ.setdefault('DATABASE_URL', 'sqlite:///./data/app.db')
 os.environ.setdefault('UPLOAD_DIR', './data/uploads')
+
+# Ensure the data directory exists so the file-based SQLite database can be
+# opened (e.g. during app startup validation).
+_data_dir = os.path.join(os.getcwd(), 'data')
+os.makedirs(_data_dir, exist_ok=True)
