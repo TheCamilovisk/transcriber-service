@@ -5,7 +5,7 @@ description = 'Internal REST API for asynchronous audio transcription using Fast
 readme = 'README.md'
 requires-python = '>=3.13'
 dependencies = [
-    'fastapi',
+    "fastapi[standard]",
     'uvicorn',
     'sqlalchemy',
     'alembic',
@@ -15,7 +15,13 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = ['pytest', 'pytest-asyncio', 'httpx', 'ruff', 'pytest-cov']
+dev = [
+    'pytest',
+    'pytest-asyncio',
+    'ruff',
+    'pytest-cov',
+    "httpx2>=2.4.0",
+]
 
 [tool.ruff]
 target-version = 'py313'
