@@ -35,12 +35,18 @@ MAX_UPLOAD_SIZE_MB=25
 WORKER_POLL_INTERVAL_SECONDS=3
 
 FASTER_WHISPER_MODEL_SIZE=small
-FASTER_WHISPER_DEVICE=cpu
-FASTER_WHISPER_COMPUTE_TYPE=int8
+FASTER_WHISPER_DEVICE=cuda
+FASTER_WHISPER_COMPUTE_TYPE=float16
+
+# CPU fallback (host without an NVIDIA GPU / Container Toolkit):
+# FASTER_WHISPER_DEVICE=cpu
+# FASTER_WHISPER_COMPUTE_TYPE=int8
 
 API_HOST=0.0.0.0
 API_PORT=8000
 ```
+
+See [Docker Architecture §20.11](../architecture/18-docker-architecture.md#2011-gpu-support) for the GPU device reservation and runtime library setup behind the `cuda`/`float16` defaults.
 
 The application should default to the local data directory if `DATABASE_URL` is not explicitly provided:
 

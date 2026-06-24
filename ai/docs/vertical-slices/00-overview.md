@@ -73,6 +73,7 @@ Recommended implementation order:
 12. [CI workflow](slice-12-ci-workflow.md)
 13. [README and usage documentation](slice-13-readme-documentation.md)
 14. [Final cleanup and acceptance pass](slice-14-final-cleanup-acceptance.md)
+15. [GPU-enabled Faster Whisper inference](slice-15-gpu-inference.md)
 
 Each slice includes:
 

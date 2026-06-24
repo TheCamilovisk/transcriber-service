@@ -808,7 +808,15 @@ The following settings must be configurable:
 - `FASTER_WHISPER_DEVICE`
 - `FASTER_WHISPER_COMPUTE_TYPE`
 
-Defaults:
+Defaults (Docker, GPU host with NVIDIA Container Toolkit configured):
+
+```env
+FASTER_WHISPER_MODEL_SIZE=small
+FASTER_WHISPER_DEVICE=cuda
+FASTER_WHISPER_COMPUTE_TYPE=float16
+```
+
+CPU fallback (no GPU available):
 
 ```env
 FASTER_WHISPER_MODEL_SIZE=small
@@ -816,13 +824,11 @@ FASTER_WHISPER_DEVICE=cpu
 FASTER_WHISPER_COMPUTE_TYPE=int8
 ```
 
-Possible future values:
+Other supported model sizes:
 
 ```env
 FASTER_WHISPER_MODEL_SIZE=base
 FASTER_WHISPER_MODEL_SIZE=medium
-FASTER_WHISPER_DEVICE=cuda
-FASTER_WHISPER_COMPUTE_TYPE=float16
 ```
 
 ## 9.4 Transcription Result
@@ -1146,8 +1152,12 @@ MAX_UPLOAD_SIZE_MB=25
 WORKER_POLL_INTERVAL_SECONDS=3
 
 FASTER_WHISPER_MODEL_SIZE=small
-FASTER_WHISPER_DEVICE=cpu
-FASTER_WHISPER_COMPUTE_TYPE=int8
+FASTER_WHISPER_DEVICE=cuda
+FASTER_WHISPER_COMPUTE_TYPE=float16
+
+# CPU fallback (host without an NVIDIA GPU / Container Toolkit):
+# FASTER_WHISPER_DEVICE=cpu
+# FASTER_WHISPER_COMPUTE_TYPE=int8
 
 API_HOST=0.0.0.0
 API_PORT=8000
