@@ -14,6 +14,9 @@ from app.application.services.transcription_service import (
 )
 from app.infrastructure.database.session import SessionLocal
 from app.infrastructure.storage.local_audio_storage import LocalAudioStorage
+from app.infrastructure.transcriber.faster_whisper_transcriber import (
+    FasterWhisperTranscriber,
+)
 from app.settings import get_settings
 
 logger = logging.getLogger(__name__)
@@ -73,7 +76,7 @@ def _reset_processing_jobs() -> None:
         db.close()
 
 
-def run_polling_loop() -> None:
+def run_polling_loop(transcriber: FasterWhisperTranscriber) -> None:
     """Main polling loop — claim and process jobs until shutdown."""
     settings = get_settings()
 
@@ -106,9 +109,9 @@ def run_polling_loop() -> None:
             logger.info('Claimed job id=%s.', job.id)
             logger.info('Started transcription job id=%s.', job.id)
 
-            # Placeholder: in this slice we stop after claiming.
-            # Real transcription will be added in a later slice.
-            logger.info('Completed job id=%s (placeholder).', job.id)
+            service.process_job(job.id, transcriber)
+
+            logger.info('Completed job id=%s.', job.id)
 
         finally:
             if db is not None:
@@ -140,8 +143,22 @@ def main() -> None:
     # 3. Reset stuck processing jobs to pending.
     _reset_processing_jobs()
 
-    # 4. Enter polling loop.
-    run_polling_loop()
+    # 4. Create Faster Whisper transcriber.
+    logger.info(
+        'Loading Faster Whisper model (size=%s, device=%s, compute_type=%s).',
+        settings.faster_whisper_model_size,
+        settings.faster_whisper_device,
+        settings.faster_whisper_compute_type,
+    )
+    transcriber = FasterWhisperTranscriber(
+        model_size=settings.faster_whisper_model_size,
+        device=settings.faster_whisper_device,
+        compute_type=settings.faster_whisper_compute_type,
+    )
+    logger.info('Faster Whisper model loaded.')
+
+    # 5. Enter polling loop.
+    run_polling_loop(transcriber)
 
 
 if __name__ == '__main__':
